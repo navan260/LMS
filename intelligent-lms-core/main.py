@@ -109,7 +109,7 @@ async def telemetry_endpoint(data: TelemetryData):
     return {"status": "success", "cognitive_state": calculated_state.value}
 
 from services.hybrid_rag import ingest_document
-
+from fastapi.concurrency import run_in_threadpool
 @app.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.endswith(('.pdf', '.txt')):
@@ -125,10 +125,10 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File
     else:
         text = content.decode('utf-8')
         
-    # Ingest document in background so the UI doesn't hang
-    background_tasks.add_task(ingest_document, text, file.filename)
+    # Ingest document synchronously in a thread pool so it doesn't block other users
+    await run_in_threadpool(ingest_document, text, file.filename)
     
-    return {"status": "success", "message": f"Document '{file.filename}' uploaded and is being processed in the background."}
+    return {"status": "success", "message": f"Document '{file.filename}' successfully processed."}
 
 # Serve the static UI
 import os
@@ -150,3 +150,7 @@ async def telemetry_ui():
 @app.get("/challenge-ui")
 async def challenge_ui():
     return FileResponse("static/challenge.html")
+
+@app.get("/upload-ui")
+async def upload_ui():
+    return FileResponse("static/upload.html")

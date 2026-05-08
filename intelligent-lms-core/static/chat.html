@@ -147,21 +147,20 @@
             text-decoration: none;
         }
         .nav-link:hover { color: white; }
+        
+        /* Markdown formatting overrides */
+        .message p:first-child { margin-top: 0; }
+        .message p:last-child { margin-bottom: 0; }
+        .message pre { background-color: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
+        .message code { font-family: monospace; background-color: rgba(0,0,0,0.2); padding: 0.1rem 0.3rem; border-radius: 3px; }
+        
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
     <div class="sidebar">
         <a href="/" class="nav-link">← Back to Menu</a>
-        <div class="telemetry-card">
-            <h2>Document Upload</h2>
-            <p style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">
-                Upload PDFs or TXT files for RAG.
-            </p>
-            <input type="file" id="fileInput" accept=".pdf,.txt" style="margin-bottom: 0.5rem; width: 100%; color: white;">
-            <button onclick="uploadDocument()" id="uploadBtn">Upload Document</button>
-            <p id="uploadStatus" style="font-size: 0.875rem; color: #10b981; margin-top: 0.5rem; display: none;"></p>
-        </div>
         <div class="telemetry-card">
             <h2>Tutor Mode</h2>
             <select id="modeSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: var(--panel-bg); color: white; border: 1px solid #334155; margin-bottom: 0.5rem; outline: none;">
@@ -216,7 +215,12 @@
         function appendMessage(text, sender, missingNodes = []) {
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${sender}`;
-            msgDiv.textContent = text;
+            
+            if (sender === 'bot') {
+                msgDiv.innerHTML = marked.parse(text);
+            } else {
+                msgDiv.textContent = text;
+            }
             
             if (missingNodes && missingNodes.length > 0) {
                 const missingDiv = document.createElement('div');
@@ -275,45 +279,7 @@
             }
         }
 
-        async function uploadDocument() {
-            const fileInput = document.getElementById('fileInput');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const uploadStatus = document.getElementById('uploadStatus');
 
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please select a file to upload.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Uploading...';
-            uploadStatus.style.display = 'none';
-
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    uploadStatus.textContent = data.message;
-                    uploadStatus.style.display = 'block';
-                    fileInput.value = '';
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Failed to upload document.');
-            } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Upload Document';
-            }
-        }
     </script>
 </body>
 </html>

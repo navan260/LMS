@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+        }
+
+        body {
+            margin: 0;
+            padding: 2rem;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin-bottom: 2rem; }
+
+        .telemetry-card {
+            background-color: var(--panel-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: #94a3b8;
+            text-decoration: none;
+            align-self: flex-start;
+            margin-left: max(0px, calc(50vw - 250px));
+        }
+        .nav-link:hover { color: white; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .processing-animation {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            color: var(--accent-color) !important;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="nav-link">← Back to Menu</a>
+    <h1>Document Upload</h1>
+    <div class="telemetry-card">
+        <h2>Ingest Content</h2>
+        <p style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 1rem;">
+            Upload PDFs or TXT files for the RAG and Graph extraction system.
+        </p>
+        <input type="file" id="fileInput" accept=".pdf,.txt" style="margin-bottom: 1rem; width: 100%; color: white; padding: 1rem; background: #0f172a; border-radius: 8px; border: 1px dashed #334155;">
+        <button onclick="uploadDocument()" id="uploadBtn">Upload Document</button>
+        <p id="uploadStatus" style="font-size: 0.875rem; margin-top: 1rem; display: none;"></p>
+    </div>
+
+    <script>
+        async function uploadDocument() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadStatus = document.getElementById('uploadStatus');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Processing...';
+            uploadStatus.style.display = 'block';
+            uploadStatus.className = 'processing-animation';
+            uploadStatus.textContent = 'Processing document... Please wait.';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    uploadStatus.style.display = 'none';
+                } else {
+                    uploadStatus.className = '';
+                    uploadStatus.style.color = 'var(--success-color)';
+                    uploadStatus.textContent = 'Finished uploading document!';
+                    fileInput.value = '';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to upload document.');
+                uploadStatus.style.display = 'none';
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload Document';
+            }
+        }
+    </script>
+</body>
+</html>
