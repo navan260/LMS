@@ -8,6 +8,8 @@ class AgentState(TypedDict):
     mode: str
     retrieved_docs: List[str]
     prerequisites: List[str]
+    matched_concepts: List[str]  # Concepts directly relevant to the user's query
     current_load_state: CognitiveState
     graph_nodes: Dict[str, Any] # Memory agent needs this
     missing_nodes: List[str] # Output from memory agent
+    courseid: str

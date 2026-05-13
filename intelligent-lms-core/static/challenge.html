@@ -4,130 +4,339 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autonomous Challenge Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: #1e293b;
-            --text-color: #f8fafc;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
+            --font-serif: 'Cormorant Garamond', serif;
+            --bg-color: #050505;
+            --glass-bg: rgba(18, 18, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --accent-color: #d4af37;
+            --accent-hover: #f1d570;
             --danger-color: #ef4444;
-            --success-color: #10b981;
+            --success-color: #4ade80;
+            --warning-color: #f59e0b;
         }
 
         body {
             margin: 0;
             padding: 2rem;
+            padding-bottom: 4rem;
             font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg-color);
+            background: linear-gradient(-45deg, #050505, #111827, #0f172a, #000000);
+            background-size: 400% 400%;
+            background-attachment: fixed;
+            animation: bgPan 25s ease infinite;
             color: var(--text-color);
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            box-sizing: border-box;
         }
 
-        h1, h2 {
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
             margin-top: 0;
+            font-family: var(--font-serif);
+            font-size: 2.8rem;
             font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--accent-color, var(--primary-color));
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+            text-align: center;
         }
 
         .telemetry-card {
-            background-color: var(--panel-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            width: 100%;
-            max-width: 600px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.6s ease-out;
         }
 
         button {
-            background-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
             color: white;
             border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
+            padding: 1.2rem 1.5rem;
+            border-radius: 12px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s ease;
             width: 100%;
-            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+            font-family: inherit;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--muted-text);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 12px;
+            outline: none;
+            font-family: inherit;
             font-size: 1rem;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
         }
 
-        button:hover {
-            background-color: var(--accent-hover);
+        select:focus, textarea:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: rgba(15, 23, 42, 0.9);
         }
 
-        .nav-link {
-            display: inline-block;
+                .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
             margin-bottom: 2rem;
-            color: #94a3b8;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: var(--text-color);
             text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             align-self: flex-start;
         }
-        .nav-link:hover { color: white; }
+
+        .nav-link:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+.concept-badge {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: #93c5fd;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #fcd34d;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        #challengeQuestion {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin: 1.5rem 0;
+            color: white;
+        }
+
+        #feedbackArea {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    
+        @keyframes bgPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    
+        .background-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.8));
+            pointer-events: none;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
-    <div style="width: 100%; max-width: 600px;">
+    <div class="background-overlay"></div>
+
+    <div class="container">
         <a href="/" class="nav-link">← Back to Menu</a>
-        <h1>Autonomous Challenge Mode</h1>
+        <h1>Autonomous Challenge</h1>
         
-        <div class="telemetry-card" style="margin-bottom: 1rem;">
-            <button onclick="generateChallenge()" id="genChallengeBtn">Generate Challenge</button>
-            <div id="challengeArea" style="display: none; margin-top: 1.5rem;">
-                <div style="margin-bottom: 1rem; font-size: 0.875rem; color: #94a3b8;">
-                    Concept: <span id="challengeConcept" style="color: white; font-weight: bold;"></span> | 
-                    Difficulty: <span id="challengeDifficulty" style="color: #fbbf24;"></span>
+        <div class="telemetry-card">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+                <label for="courseSelect" style="font-size: 0.95rem; font-weight: 600; color: var(--muted-text);">Select Course Environment</label>
+                <select id="courseSelect"></select>
+            </div>
+            
+            <button onclick="generateChallenge()" id="genChallengeBtn">Generate Next Challenge</button>
+            
+            <div id="challengeArea" style="display: none; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px dashed var(--glass-border);">
+                <div style="margin-bottom: 1rem;">
+                    <span class="concept-badge" id="challengeConcept"></span>
+                    <span class="difficulty-badge" id="challengeDifficulty"></span>
                 </div>
-                <div id="challengeQuestion" style="font-size: 1.1rem; margin-bottom: 1.5rem; line-height: 1.5;"></div>
+                <div id="challengeQuestion"></div>
                 
-                <textarea id="challengeAnswer" rows="6" style="width: 100%; box-sizing: border-box; background-color: var(--bg-color); border: 1px solid #334155; color: white; padding: 1rem; border-radius: 8px; outline: none; margin-bottom: 1rem; font-family: inherit; font-size: 1rem;" placeholder="Type your answer here..."></textarea>
+                <textarea id="challengeAnswer" rows="5" placeholder="Type your answer here..." style="margin-bottom: 1.5rem;"></textarea>
                 
                 <button onclick="submitAnswer()" id="submitAnswerBtn">Submit Answer</button>
             </div>
             
-            <div id="feedbackArea" style="display: none; margin-top: 1.5rem; padding: 1.5rem; border-radius: 8px; background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color);">
-                <h3 style="margin-top: 0; color: var(--success-color);" id="feedbackTitle">Result</h3>
-                <p style="margin-bottom: 0.5rem;"><strong>Score:</strong> <span id="feedbackScore"></span></p>
-                <p style="margin-bottom: 0.5rem;" id="feedbackText"></p>
-                <p style="margin-bottom: 0; color: #fbbf24; font-style: italic;" id="feedbackHint"></p>
+            <div id="feedbackArea" style="display: none;">
+                <h3 style="margin-top: 0; font-size: 1.25rem;" id="feedbackTitle">Result</h3>
+                <p style="margin-bottom: 0.75rem; font-size: 1.05rem;"><strong>Score:</strong> <span id="feedbackScore"></span></p>
+                <p style="margin-bottom: 1rem; color: #cbd5e1; line-height: 1.5;" id="feedbackText"></p>
+                <p style="margin-bottom: 0; color: var(--warning-color); font-style: italic; font-size: 0.95rem;" id="feedbackHint"></p>
             </div>
         </div>
     </div>
 
     <script>
+        function getAuthToken() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token') || '';
+        }
+
         let currentChallengeConcept = "";
         let currentChallengeQuestion = "";
+        let selectedCourseId = "";
+
+        async function loadCourses() {
+            const select = document.getElementById('courseSelect');
+            select.innerHTML = '<option value="">Loading courses...</option>';
+
+            try {
+                const token = getAuthToken();
+                const response = await fetch('/courses', {
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                });
+                const data = await response.json();
+                select.innerHTML = '';
+                if (!data.courses || data.courses.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No enrolled courses found';
+                    select.appendChild(option);
+                    return;
+                }
+                data.courses.forEach((course) => {
+                    const option = document.createElement('option');
+                    option.value = course.courseid;
+                    const name = course.coursefullname || course.courseshortname || course.courseid;
+                    option.textContent = `${name} (${course.enrolled_count} enrolled)`;
+                    select.appendChild(option);
+                });
+                selectedCourseId = select.value;
+            } catch (err) {
+                console.error(err);
+                select.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Failed to load courses';
+                select.appendChild(option);
+            }
+        }
+
+        function getSelectedCourseId() {
+            const select = document.getElementById('courseSelect');
+            return select ? select.value : '';
+        }
 
         async function generateChallenge() {
             const btn = document.getElementById('genChallengeBtn');
             btn.disabled = true;
-            btn.textContent = "Loading...";
+            btn.textContent = "Analyzing Graph... Please wait.";
             
             document.getElementById('challengeArea').style.display = 'none';
             document.getElementById('feedbackArea').style.display = 'none';
             document.getElementById('challengeAnswer').value = '';
 
             try {
+                const token = getAuthToken();
                 const response = await fetch('/generate-challenge', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: "DEV_GHOST_USER" })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
+                    body: JSON.stringify({ courseid: getSelectedCourseId() })
                 });
                 
                 const data = await response.json();
                 
+                if (data && data.status === 'not_enrolled') {
+                    alert(data.message || 'You are not enrolled in any course yet.');
+                    return;
+                }
                 if (!data) {
-                    alert("No challenges available! You might have mastered everything.");
+                    alert("All concepts are mastered for this course.");
                     return;
                 }
                 
                 currentChallengeConcept = data.concept_name;
                 currentChallengeQuestion = data.question_text;
                 
-                document.getElementById('challengeConcept').textContent = data.concept_name;
-                document.getElementById('challengeDifficulty').textContent = data.difficulty;
+                document.getElementById('challengeConcept').textContent = "Concept: " + data.concept_name;
+                document.getElementById('challengeDifficulty').textContent = "Difficulty: " + data.difficulty;
                 document.getElementById('challengeQuestion').textContent = data.question_text;
                 
                 document.getElementById('challengeArea').style.display = 'block';
@@ -136,7 +345,7 @@
                 alert("Failed to generate challenge.");
             } finally {
                 btn.disabled = false;
-                btn.textContent = "Generate Challenge";
+                btn.textContent = "Generate Next Challenge";
             }
         }
 
@@ -146,14 +355,18 @@
             
             const btn = document.getElementById('submitAnswerBtn');
             btn.disabled = true;
-            btn.textContent = "Grading...";
+            btn.textContent = "Grading Answer...";
             
             try {
+                const token = getAuthToken();
                 const response = await fetch('/grade', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
                     body: JSON.stringify({
-                        user_id: "DEV_GHOST_USER",
+                        courseid: getSelectedCourseId(),
                         concept_name: currentChallengeConcept,
                         question: currentChallengeQuestion,
                         student_answer: answer
@@ -161,22 +374,26 @@
                 });
                 
                 const data = await response.json();
+                if (data && data.status === 'not_enrolled') {
+                    alert(data.message || 'You are not enrolled in any course yet.');
+                    return;
+                }
                 
                 const feedbackArea = document.getElementById('feedbackArea');
                 const feedbackTitle = document.getElementById('feedbackTitle');
                 
-                document.getElementById('feedbackScore').textContent = data.score;
+                document.getElementById('feedbackScore').textContent = (data.score * 100).toFixed(0) + "%";
                 document.getElementById('feedbackText').textContent = data.feedback;
                 
                 if (data.is_passed) {
-                    feedbackArea.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-                    feedbackArea.style.borderColor = "var(--success-color)";
+                    feedbackArea.style.background = "rgba(16, 185, 129, 0.15)";
+                    feedbackArea.style.borderColor = "rgba(16, 185, 129, 0.5)";
                     feedbackTitle.style.color = "var(--success-color)";
                     feedbackTitle.textContent = "Passed! Mastery Updated.";
                     document.getElementById('feedbackHint').textContent = "";
                 } else {
-                    feedbackArea.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
-                    feedbackArea.style.borderColor = "var(--danger-color)";
+                    feedbackArea.style.background = "rgba(239, 68, 68, 0.15)";
+                    feedbackArea.style.borderColor = "rgba(239, 68, 68, 0.5)";
                     feedbackTitle.style.color = "var(--danger-color)";
                     feedbackTitle.textContent = "Not Quite. Struggling Flag Set.";
                     document.getElementById('feedbackHint').textContent = "Hint: " + data.socratic_hint;
@@ -191,6 +408,16 @@
                 btn.textContent = "Submit Answer";
             }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCourses();
+            const select = document.getElementById('courseSelect');
+            if (select) {
+                select.addEventListener('change', () => {
+                    selectedCourseId = select.value;
+                });
+            }
+        });
     </script>
 </body>
 </html>

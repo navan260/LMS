@@ -10,3 +10,4 @@ neo4j
 langchain-neo4j
 astrapy
 langchain-astradb
+PyJWT

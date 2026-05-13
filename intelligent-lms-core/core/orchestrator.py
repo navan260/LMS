@@ -10,11 +10,12 @@ def rag_node(state: AgentState) -> dict:
         return {}
     
     last_message = state["messages"][-1].content
-    retrieval_data = hybrid_retrieve(last_message)
+    retrieval_data = hybrid_retrieve(last_message, state.get("courseid"))
     
     return {
         "retrieved_docs": retrieval_data["documents"],
         "prerequisites": retrieval_data["prerequisites"],
+        "matched_concepts": retrieval_data["matched_concepts"],
         "graph_nodes": retrieval_data["graph_nodes"]
     }
 

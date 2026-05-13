@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Test Harness</title>
+    <style>
+        :root {
+            --font-serif: 'Cormorant Garamond', serif;
+            --bg-color: #050505;
+            --panel-bg: #1e293b;
+            --text-color: #f3f4f6;
+            --accent-color: #d4af37;
+            --accent-hover: #f1d570;
+            --muted-text: #9ca3af;
+            --danger-color: #ef4444;
+            --success-color: #4ade80;
+        }
+
+        body {
+            margin: 0;
+            padding: 2rem;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin: 0 0 1.5rem 0; }
+
+        .container {
+            width: 100%;
+            max-width: 780px;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--muted-text);
+            margin-bottom: 0.4rem;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: var(--text-color);
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: var(--accent-hover); }
+
+        .status {
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+        }
+
+        .status.error { color: var(--danger-color); }
+        .status.success { color: var(--success-color); }
+
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .links a {
+            display: block;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--accent-color);
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .links a:hover {
+            background-color: #162034;
+            color: var(--accent-hover);
+        }
+
+                .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            align-self: flex-start;
+        }
+
+        .nav-link:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+.jwt-output {
+            width: 100%;
+            background-color: #0b1220;
+            border: 1px solid #334155;
+            color: var(--text-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            min-height: 80px;
+            word-break: break-all;
+        }
+    
+        @keyframes bgPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    
+        .background-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.8));
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsrsasign@10.8.6/lib/jsrsasign-all-min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="nav-link">← Back to Menu</a>
+        <h1>JWT Test Harness</h1>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">User Information</h2>
+            <div class="grid">
+                <div>
+                    <label for="userid">User ID</label>
+                    <input id="userid" placeholder="42" />
+                </div>
+                <div>
+                    <label for="username">Username</label>
+                    <input id="username" placeholder="jdoe" />
+                </div>
+                <div>
+                    <label for="email">Email</label>
+                    <input id="email" placeholder="jdoe@example.com" />
+                </div>
+                <div>
+                    <label for="firstname">First Name</label>
+                    <input id="firstname" placeholder="Jane" />
+                </div>
+                <div>
+                    <label for="lastname">Last Name</label>
+                    <input id="lastname" placeholder="Doe" />
+                </div>
+                <div>
+                    <label for="fullname">Full Name</label>
+                    <input id="fullname" placeholder="Jane Doe" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">Course Information</h2>
+            <div class="grid">
+                <div>
+                    <label for="courseid">Course ID</label>
+                    <input id="courseid" placeholder="CS101" />
+                </div>
+                <div>
+                    <label for="courseshortname">Course Shortname</label>
+                    <input id="courseshortname" placeholder="IntroCS" />
+                </div>
+                <div>
+                    <label for="coursefullname">Course Fullname</label>
+                    <input id="coursefullname" placeholder="Introduction to Computer Science" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">JWT Settings</h2>
+            <div class="grid">
+                <div>
+                    <label for="secret">JWT Secret</label>
+                    <input id="secret" placeholder="Shared secret" />
+                </div>
+                <div>
+                    <label for="issuer">Issuer (iss)</label>
+                    <input id="issuer" placeholder="moodle" />
+                </div>
+                <div>
+                    <label for="audience">Audience (aud)</label>
+                    <input id="audience" placeholder="intelligent-lms" />
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick="generateToken()">Generate Token</button>
+                <button onclick="clearStored()" style="background-color:#334155;">Clear Stored</button>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">JWT Output</h2>
+            <div id="jwtOutput" class="jwt-output"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">Launch Modules</h2>
+            <div class="links" id="links"></div>
+        </div>
+    </div>
+
+    <script>
+        const storageKey = 'lms_test_jwt';
+        const payloadKey = 'lms_test_payload';
+
+        const fields = [
+            'userid', 'username', 'email', 'firstname', 'lastname', 'fullname',
+            'courseid', 'courseshortname', 'coursefullname',
+            'secret', 'issuer', 'audience'
+        ];
+
+        function getFieldValue(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function setFieldValue(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        }
+
+        function loadStored() {
+            const payload = localStorage.getItem(payloadKey);
+            if (payload) {
+                try {
+                    const data = JSON.parse(payload);
+                    fields.forEach((f) => setFieldValue(f, data[f] || ''));
+                } catch (err) {
+                    console.warn('Failed to load stored payload', err);
+                }
+            }
+
+            const token = localStorage.getItem(storageKey);
+            if (token) {
+                document.getElementById('jwtOutput').textContent = token;
+                buildLinks(token);
+            }
+        }
+
+        function buildLinks(token) {
+            const links = [
+                { href: '/chat-ui', label: 'Chat UI' },
+                { href: '/telemetry-ui', label: 'Telemetry UI' },
+                { href: '/challenge-ui', label: 'Challenge UI' },
+                { href: '/upload-ui', label: 'Upload UI' },
+                { href: '/embed', label: 'Embed Chat' }
+            ];
+            const container = document.getElementById('links');
+            container.innerHTML = '';
+            const suffix = token ? `?token=${encodeURIComponent(token)}` : '';
+            links.forEach((item) => {
+                const a = document.createElement('a');
+                a.href = item.href + suffix;
+                a.textContent = item.label;
+                container.appendChild(a);
+            });
+        }
+
+        async function registerUserCourse(token) {
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                });
+                return response.ok;
+            } catch (err) {
+                console.error('Failed to register user/course', err);
+                return false;
+            }
+        }
+
+        async function generateToken() {
+            const status = document.getElementById('status');
+            status.textContent = '';
+            status.className = 'status';
+
+            const secret = getFieldValue('secret');
+            if (!secret) {
+                status.textContent = 'JWT secret is required to sign the token.';
+                status.classList.add('error');
+                return;
+            }
+
+            const payload = {
+                userid: getFieldValue('userid'),
+                username: getFieldValue('username'),
+                email: getFieldValue('email'),
+                firstname: getFieldValue('firstname'),
+                lastname: getFieldValue('lastname'),
+                fullname: getFieldValue('fullname'),
+                courseid: getFieldValue('courseid'),
+                courseshortname: getFieldValue('courseshortname'),
+                coursefullname: getFieldValue('coursefullname')
+            };
+
+            const missing = Object.entries(payload)
+                .filter(([, value]) => !value)
+                .map(([key]) => key);
+
+            if (missing.length > 0) {
+                status.textContent = `Missing required fields: ${missing.join(', ')}`;
+                status.classList.add('error');
+                return;
+            }
+
+            const issuer = getFieldValue('issuer') || 'moodle';
+            const audience = getFieldValue('audience') || 'intelligent-lms';
+            const now = Math.floor(Date.now() / 1000);
+
+            payload.iat = now;
+            payload.exp = now + 3600;
+            payload.iss = issuer;
+            payload.aud = audience;
+
+            const header = { alg: 'HS256', typ: 'JWT' };
+            const token = KJUR.jws.JWS.sign('HS256', JSON.stringify(header), JSON.stringify(payload), secret);
+
+            localStorage.setItem(storageKey, token);
+            const storedPayload = { ...payload, secret, issuer, audience };
+            localStorage.setItem(payloadKey, JSON.stringify(storedPayload));
+
+            document.getElementById('jwtOutput').textContent = token;
+            buildLinks(token);
+
+            const registered = await registerUserCourse(token);
+            if (registered) {
+                status.textContent = 'Token generated, stored, and user/course registered.';
+                status.classList.add('success');
+            } else {
+                status.textContent = 'Token generated, but registration failed.';
+                status.classList.add('error');
+            }
+        }
+
+        function clearStored() {
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(payloadKey);
+            document.getElementById('jwtOutput').textContent = '';
+            document.getElementById('links').innerHTML = '';
+            const status = document.getElementById('status');
+            status.textContent = 'Stored token cleared.';
+            status.className = 'status success';
+        }
+
+        loadStored();
+    </script>
+</body>
+</html>

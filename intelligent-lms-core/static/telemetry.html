@@ -4,112 +4,224 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telemetry Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: #1e293b;
-            --text-color: #f8fafc;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
+            --font-serif: 'Cormorant Garamond', serif;
+            --bg-color: #050505;
+            --glass-bg: rgba(18, 18, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --accent-color: #d4af37;
+            --accent-hover: #f1d570;
             --danger-color: #ef4444;
-            --success-color: #10b981;
+            --success-color: #4ade80;
+            --warning-color: #f59e0b;
         }
 
         body {
             margin: 0;
             padding: 2rem;
+            padding-bottom: 4rem;
             font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg-color);
+            background: linear-gradient(-45deg, #050505, #111827, #0f172a, #000000);
+            background-size: 400% 400%;
+            background-attachment: fixed;
+            animation: bgPan 25s ease infinite;
             color: var(--text-color);
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            box-sizing: border-box;
         }
 
-        h1, h2 {
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
             margin-top: 0;
+            font-family: var(--font-serif);
+            font-size: 2.8rem;
             font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--accent-color, var(--primary-color));
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+            margin-bottom: 2rem;
+            text-align: center;
+            animation: fadeInDown 0.6s ease-out;
         }
 
         .telemetry-card {
-            background-color: var(--panel-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            width: 100%;
-            max-width: 500px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
             border-radius: 999px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-            background-color: var(--success-color);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--success-color), #059669);
             color: white;
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            box-sizing: border-box;
+            letter-spacing: 0.5px;
         }
 
         .status-badge.frustrated {
-            background-color: var(--danger-color);
+            background: linear-gradient(135deg, var(--danger-color), #dc2626);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
         }
 
         .status-badge.idle {
-            background-color: #f59e0b;
+            background: linear-gradient(135deg, var(--warning-color), #d97706);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
         }
 
         button {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid var(--glass-border);
+            padding: 1.2rem;
+            border-radius: 12px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
             width: 100%;
             margin-bottom: 1rem;
-            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         button:hover {
-            background-color: var(--accent-hover);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+        
+        button:active { transform: translateY(0); }
 
-        .nav-link {
-            display: inline-block;
+                .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
             margin-bottom: 2rem;
-            color: #94a3b8;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: var(--text-color);
             text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             align-self: flex-start;
         }
-        .nav-link:hover { color: white; }
+
+        .nav-link:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+@keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    
+        @keyframes bgPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    
+        .background-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.8));
+            pointer-events: none;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
-    <div style="width: 100%; max-width: 500px;">
+    <div class="background-overlay"></div>
+
+    <div class="container">
         <a href="/" class="nav-link">← Back to Menu</a>
-        <h1>Live Telemetry Simulation</h1>
+        <h1>Live Telemetry</h1>
         
         <div class="telemetry-card">
-            <div id="statusBadge" class="status-badge">State: Focused</div>
-            <p style="margin-bottom: 1.5rem;">Simulate Student Behavior:</p>
-            <button onclick="simulateTelemetry(150, 5, 6)">Frantic Scrolling (Frustrated)</button>
-            <button onclick="simulateTelemetry(0, 150, 0)">Long Dwell Time (Idle)</button>
-            <button onclick="simulateTelemetry(20, 60, 2)">Normal Reading (Focused)</button>
+            <div id="statusBadge" class="status-badge">State: FOCUSED</div>
+            <p style="margin-bottom: 1.5rem; color: var(--muted-text); font-weight: 500; text-align: center;">Simulate Student Behavior:</p>
+            <button onclick="simulateTelemetry(150, 5, 6)">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Frantic Scrolling (Frustrated)
+            </button>
+            <button onclick="simulateTelemetry(0, 150, 0)">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Long Dwell Time (Idle)
+            </button>
+            <button onclick="simulateTelemetry(20, 60, 2)">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                Normal Reading (Focused)
+            </button>
         </div>
     </div>
 
     <script>
+        function getAuthToken() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token') || '';
+        }
+
         const statusBadge = document.getElementById('statusBadge');
         
         async function simulateTelemetry(velocity, dwell, tabs) {
             try {
+                const token = getAuthToken();
                 const response = await fetch('/telemetry', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
                     body: JSON.stringify({
                         scroll_velocity: velocity,
                         dwell_time: dwell,
@@ -117,6 +229,10 @@
                     })
                 });
                 const data = await response.json();
+                if (data.status === 'not_enrolled') {
+                    alert(data.message || 'You are not enrolled in this course yet.');
+                    return;
+                }
                 updateBadge(data.cognitive_state);
             } catch (err) {
                 console.error(err);
@@ -124,10 +240,11 @@
         }
 
         function updateBadge(state) {
-            statusBadge.textContent = `State: ${state}`;
+            const upperState = state.toUpperCase();
+            statusBadge.textContent = `State: ${upperState}`;
             statusBadge.className = 'status-badge';
-            if (state === 'Frustrated') statusBadge.classList.add('frustrated');
-            else if (state === 'Idle') statusBadge.classList.add('idle');
+            if (upperState === 'FRUSTRATED') statusBadge.classList.add('frustrated');
+            else if (upperState === 'IDLE') statusBadge.classList.add('idle');
         }
     </script>
 </body>

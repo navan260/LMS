@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_astradb import AstraDBVectorStore
@@ -62,14 +62,113 @@ def initialize_neo4j_schema():
     if graph_db:
         try:
             graph_db.query("CREATE CONSTRAINT concept_name_unique IF NOT EXISTS FOR (c:Concept) REQUIRE c.name IS UNIQUE")
+            graph_db.query("CREATE CONSTRAINT course_id_unique IF NOT EXISTS FOR (c:Course) REQUIRE c.courseid IS UNIQUE")
+            graph_db.query("CREATE CONSTRAINT user_id_unique IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE")
             print("Neo4j schema initialized.")
         except Exception as e:
             print(f"Error initializing Neo4j schema: {e}")
 
+def ensure_user_course_nodes(
+    user_id: str,
+    username: str,
+    email: str,
+    fullname: str,
+    courseid: str,
+    courseshortname: str,
+    coursefullname: str
+):
+    if not graph_db:
+        return
+    cypher = """
+    MERGE (u:User {id: $user_id})
+    SET u.username = $username,
+        u.email = $email,
+        u.fullname = $fullname
+    MERGE (c:Course {courseid: $courseid})
+    SET c.shortname = $courseshortname,
+        c.fullname = $coursefullname
+    """
+    try:
+        graph_db.query(
+            cypher,
+            {
+                "user_id": user_id,
+                "username": username,
+                "email": email,
+                "fullname": fullname,
+                "courseid": courseid,
+                "courseshortname": courseshortname,
+                "coursefullname": coursefullname
+            }
+        )
+    except Exception as e:
+        print(f"Error ensuring user/course relationship in Neo4j: {e}")
+
+def enroll_user_in_course(user_id: str, courseid: str):
+    if not graph_db:
+        return
+    cypher = """
+    MATCH (u:User {id: $user_id})
+    MATCH (c:Course {courseid: $courseid})
+    MERGE (u)-[:ENROLLED_IN]->(c)
+    """
+    try:
+        graph_db.query(cypher, {"user_id": user_id, "courseid": courseid})
+    except Exception as e:
+        print(f"Error enrolling user in course: {e}")
+
+def is_enrolled_in_course(user_id: str, courseid: str) -> bool:
+    if not graph_db:
+        return False
+    if not courseid:
+        return False
+    cypher = """
+    MATCH (:User {id: $user_id})-[:ENROLLED_IN]->(:Course {courseid: $courseid})
+    RETURN count(*) AS count
+    """
+    try:
+        res = graph_db.query(cypher, {"user_id": user_id, "courseid": courseid})
+        return bool(res and res[0].get("count", 0) > 0)
+    except Exception as e:
+        print(f"Error checking enrollment for course: {e}")
+        return False
+
+def is_enrolled_any(user_id: str) -> bool:
+    if not graph_db:
+        return False
+    cypher = """
+    MATCH (:User {id: $user_id})-[:ENROLLED_IN]->(:Course)
+    RETURN count(*) AS count
+    """
+    try:
+        res = graph_db.query(cypher, {"user_id": user_id})
+        return bool(res and res[0].get("count", 0) > 0)
+    except Exception as e:
+        print(f"Error checking enrollment for any course: {e}")
+        return False
+
+def get_enrolled_courses_with_counts(user_id: str) -> List[Dict[str, Any]]:
+    if not graph_db:
+        return []
+    cypher = """
+    MATCH (u:User {id: $user_id})-[:ENROLLED_IN]->(c:Course)
+    OPTIONAL MATCH (:User)-[:ENROLLED_IN]->(c)
+    RETURN c.courseid AS courseid,
+           c.shortname AS courseshortname,
+           c.fullname AS coursefullname,
+           count(*) AS enrolled_count
+    ORDER BY enrolled_count DESC
+    """
+    try:
+        return graph_db.query(cypher, {"user_id": user_id})
+    except Exception as e:
+        print(f"Error fetching enrolled courses: {e}")
+        return []
+
 # LLM for Extraction
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
-def ingest_document(text: str, source_name: str):
+def ingest_document(text: str, source_name: str, course: Optional[Dict[str, str]] = None):
     """Processes uploaded text, stores chunks in Vector DB, and extracts graph to Neo4j."""
     
     # 1. Store in Vector DB (DataStax)
@@ -82,7 +181,14 @@ def ingest_document(text: str, source_name: str):
             success_count = 0
             for c in chunks:
                 try:
-                    doc = Document(page_content=c, metadata={"source": source_name})
+                    metadata = {"source": source_name}
+                    if course:
+                        metadata.update({
+                            "courseid": course.get("courseid"),
+                            "courseshortname": course.get("courseshortname"),
+                            "coursefullname": course.get("coursefullname")
+                        })
+                    doc = Document(page_content=c, metadata=metadata)
                     vector_store.add_documents([doc])
                     success_count += 1
                 except Exception as e:
@@ -114,6 +220,23 @@ def ingest_document(text: str, source_name: str):
                     "UNWIND $data AS item MERGE (c:Concept {name: toLower(item.name)}) SET c.description = item.description",
                     {"data": concepts_data}
                 )
+
+            courseid = None
+            if course:
+                courseid = course.get("courseid")
+                if courseid:
+                    graph_db.query(
+                        "MERGE (c:Course {courseid: $courseid}) SET c.shortname = $shortname, c.fullname = $fullname",
+                        {
+                            "courseid": courseid,
+                            "shortname": course.get("courseshortname"),
+                            "fullname": course.get("coursefullname")
+                        }
+                    )
+                    graph_db.query(
+                        "UNWIND $data AS item MATCH (k:Concept {name: toLower(item.name)}) MATCH (c:Course {courseid: $courseid}) MERGE (k)-[:PART_OF]->(c)",
+                        {"data": concepts_data, "courseid": courseid}
+                    )
             
             prereq_data = [{"source": r.source_concept, "target": r.target_concept} for r in kg.relationships if r.relationship_type.upper() == "PREREQUISITE_OF"]
             related_data = [{"source": r.source_concept, "target": r.target_concept} for r in kg.relationships if r.relationship_type.upper() != "PREREQUISITE_OF"]
@@ -139,37 +262,46 @@ def ingest_document(text: str, source_name: str):
         print("Neo4j not configured. Skipping graph extraction.")
 
 
-def hybrid_retrieve(query: str) -> Dict[str, Any]:
+def hybrid_retrieve(query: str, courseid: Optional[str] = None) -> Dict[str, Any]:
     """Retrieves documents from DataStax and prerequisites from Neo4j."""
     
     retrieved_docs = []
     if vector_store:
-        results = vector_store.similarity_search(query, k=3)
+        search_kwargs = {"k": 3}
+        if courseid:
+            search_kwargs["filter"] = {"courseid": courseid}
+        results = vector_store.similarity_search(query, **search_kwargs)
         retrieved_docs = [r.page_content for r in results]
     else:
         retrieved_docs = ["(Vector RAG not configured)"]
 
     prerequisites = []
     graph_nodes = {}
+    matched_concepts = []  # Must be initialised here — used in return regardless of graph_db state
     
     if graph_db:
-        # 1. Ask LLM to extract keywords from query to search graph
-        # For simplicity, we just use the query to find similar nodes (string matching)
-        # A robust way is Vector Index on Neo4j or LLM keyword extraction
-        
-        # Example Cypher: find nodes mentioned in query, get their prerequisites
+        # Find concepts mentioned in query using word-level bidirectional matching.
+        # This handles plurals/variants e.g. "loop" matches concept "loops", "variable" matches "variables".
+        query_words = [w for w in query.lower().split() if len(w) > 2]
+        print(f"[RAG] Query words for Neo4j matching: {query_words}")
         cypher_query = """
-        MATCH (c:Concept)<-[:PREREQUISITE_OF]-(prereq:Concept)
-        WHERE toLower($query) CONTAINS toLower(c.name)
-        RETURN prereq.name AS prerequisite, prereq.description AS desc
-        LIMIT 5
+        MATCH (c:Concept)-[:PART_OF]->(course:Course {courseid: $courseid})
+        WHERE ANY(word IN $query_words WHERE toLower(c.name) CONTAINS word OR word CONTAINS toLower(c.name))
+        OPTIONAL MATCH (prereq:Concept)-[:PREREQUISITE_OF]->(c)
+        RETURN c.name AS matched_concept, prereq.name AS prerequisite
+        LIMIT 10
         """
         try:
-            results = graph_db.query(cypher_query, {"query": query})
-            prerequisites = [r["prerequisite"] for r in results]
+            results = graph_db.query(cypher_query, {"query_words": query_words, "courseid": courseid})
+            matched_concepts = list({r["matched_concept"] for r in results if r["matched_concept"]})
+            prerequisites = list({r["prerequisite"] for r in results if r["prerequisite"]})
+            print(f"[RAG] Matched concepts: {matched_concepts}, Prerequisites: {prerequisites}")
             
-            # Also fetch all nodes for memory agent (in a real app, don't fetch all, just relevant ones)
-            all_nodes_res = graph_db.query("MATCH (c:Concept) RETURN c.name as name, c.description as desc LIMIT 20")
+            # Also fetch all nodes for memory agent
+            all_nodes_res = graph_db.query(
+                "MATCH (c:Concept)-[:PART_OF]->(course:Course {courseid: $courseid}) RETURN c.name as name, c.description as desc LIMIT 20",
+                {"courseid": courseid}
+            )
             for record in all_nodes_res:
                 graph_nodes[record["name"]] = {"name": record["name"], "description": record["desc"]}
         except Exception as e:
@@ -182,5 +314,6 @@ def hybrid_retrieve(query: str) -> Dict[str, Any]:
     return {
         "documents": retrieved_docs,
         "prerequisites": prerequisites,
+        "matched_concepts": matched_concepts,
         "graph_nodes": graph_nodes
     }
