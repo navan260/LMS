@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Coordinator Stats</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --font-serif: 'Cormorant Garamond', serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --bg-color: #050505;
+            --glass-bg: rgba(18, 18, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --accent-color: #d4af37;
+            --accent-hover: #f1d570;
+            --danger-color: #ef4444;
+            --success-color: #4ade80;
+            --warning-color: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--font-sans);
+            color: var(--text-color);
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #050505, #111827, #0f172a, #000000);
+            background-size: 400% 400%;
+            animation: bgPan 25s ease infinite;
+            padding: 2.5rem 1.5rem 4rem;
+            position: relative;
+        }
+
+        @keyframes bgPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.8));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2rem, 3vw, 3rem);
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        h2 {
+            font-family: var(--font-serif);
+            font-weight: 500;
+            color: var(--text-color);
+            margin-top: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--muted-text);
+            max-width: 520px;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.6rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric span {
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .metric strong {
+            font-size: 2.2rem;
+            font-family: var(--font-serif);
+            color: var(--accent-color);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        select {
+            padding: 0.6rem 0.85rem;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-color);
+            border: 1px solid var(--glass-border);
+            font-family: var(--font-sans);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-color), #aa8529);
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .list-item {
+            padding: 0.8rem 1rem;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .list-item span:last-child {
+            color: var(--accent-hover);
+            font-weight: 500;
+        }
+
+        .pill {
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--muted-text);
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr);
+            gap: 1.5rem;
+        }
+
+        .chart {
+            min-height: 260px;
+        }
+
+        .toggle-group {
+            display: inline-flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            padding: 0.35rem;
+            border-radius: 999px;
+        }
+
+        .toggle-group button {
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .toggle-group button.active {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--accent-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 0.65rem 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: left;
+        }
+
+        th {
+            color: var(--muted-text);
+            font-weight: 500;
+        }
+
+        .empty {
+            color: var(--muted-text);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        @media (max-width: 960px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 720px) {
+            header { flex-direction: column; align-items: flex-start; }
+            .controls { width: 100%; }
+            select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-overlay"></div>
+    <div class="content-wrapper">
+        <header>
+            <div>
+                <h1>Coordinator Overview</h1>
+                <p class="subtitle">Monitor course materials, concept generation, and completion status for your cohort.</p>
+            </div>
+            <a class="nav-link" href="/">← Back to Menu</a>
+        </header>
+
+        <section class="panel" style="margin-bottom: 1.5rem;">
+            <div class="controls">
+                <select id="courseSelect"></select>
+                <button id="refreshBtn">Refresh</button>
+            </div>
+        </section>
+
+        <section class="grid" style="margin-bottom: 1.5rem;">
+            <div class="panel metric">
+                <span>Documents Uploaded</span>
+                <strong id="docCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Concepts Generated</span>
+                <strong id="conceptCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Enrolled Students</span>
+                <strong id="enrollCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Mastered All Concepts</span>
+                <strong id="masteredAllCount">0</strong>
+            </div>
+        </section>
+
+        <section class="two-col" style="margin-bottom: 1.5rem;">
+            <div class="panel">
+                <h2>Completion Status</h2>
+                <div id="completionChart" class="chart"></div>
+            </div>
+            <div class="panel">
+                <h2>Completion Breakdown</h2>
+                <div class="list">
+                    <div class="list-item"><span>Completed</span><span id="completedCount">0</span></div>
+                    <div class="list-item"><span>Pending</span><span id="pendingCount">0</span></div>
+                    <div class="list-item"><span>Total Enrolled</span><span id="totalEnrolled">0</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid" style="margin-bottom: 1.5rem;">
+            <div class="panel">
+                <h2>Top Concepts Mastered</h2>
+                <div id="topMastered" class="list"></div>
+            </div>
+            <div class="panel">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                    <h2 style="margin-bottom:0;">Struggling Concepts</h2>
+                    <div class="toggle-group">
+                        <button id="toggleChart" class="active" type="button">Graph</button>
+                        <button id="toggleTable" type="button">Table</button>
+                    </div>
+                </div>
+                <div id="strugglingChart" class="chart" style="margin-top:1rem;"></div>
+                <div id="strugglingTable" style="margin-top:1rem; display:none;"></div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Documents Uploaded</h2>
+            <div id="documentsList" class="list"></div>
+        </section>
+    </div>
+
+    <script>
+        const courseSelect = document.getElementById('courseSelect');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const docCount = document.getElementById('docCount');
+        const conceptCount = document.getElementById('conceptCount');
+        const enrollCount = document.getElementById('enrollCount');
+        const masteredAllCount = document.getElementById('masteredAllCount');
+        const completedCount = document.getElementById('completedCount');
+        const pendingCount = document.getElementById('pendingCount');
+        const totalEnrolled = document.getElementById('totalEnrolled');
+        const topMastered = document.getElementById('topMastered');
+        const documentsList = document.getElementById('documentsList');
+        const completionChartEl = document.getElementById('completionChart');
+        const strugglingChartEl = document.getElementById('strugglingChart');
+        const strugglingTableEl = document.getElementById('strugglingTable');
+        const toggleChart = document.getElementById('toggleChart');
+        const toggleTable = document.getElementById('toggleTable');
+
+        let completionChart;
+        let strugglingChart;
+        let cachedStruggling = [];
+
+        function getAuthToken() {
+            const params = new URLSearchParams(window.location.search);
+            const urlToken = params.get('token');
+            if (urlToken) return urlToken;
+            return localStorage.getItem('lms_test_jwt') || '';
+        }
+
+        async function fetchStats(courseid) {
+            const token = getAuthToken();
+            const query = courseid ? `?courseid=${encodeURIComponent(courseid)}` : '';
+            const res = await fetch(`/stats/coordinator${query}`, {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            return res.json();
+        }
+
+        async function fetchCourses() {
+            const token = getAuthToken();
+            const res = await fetch('/courses/coordinator', {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            return res.json();
+        }
+
+        function renderCourseSelect(courses, selectedId) {
+            courseSelect.innerHTML = '';
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseid;
+                option.textContent = course.coursefullname || course.courseshortname || course.courseid;
+                if (course.courseid === selectedId) option.selected = true;
+                courseSelect.appendChild(option);
+            });
+        }
+
+        function renderDocuments(items) {
+            documentsList.innerHTML = '';
+            if (!items || items.length === 0) {
+                documentsList.innerHTML = '<div class="empty">No documents uploaded yet.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.innerHTML = `<span>${item.name}</span><span class="pill">Document</span>`;
+                documentsList.appendChild(row);
+            });
+        }
+
+        function renderTopMastered(items) {
+            topMastered.innerHTML = '';
+            if (!items || items.length === 0) {
+                topMastered.innerHTML = '<div class="empty">No mastery data yet.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.innerHTML = `<span>${item.name}</span><span>${item.mastered_count}</span>`;
+                topMastered.appendChild(row);
+            });
+        }
+
+        function renderCompletionChart(completed, pending) {
+            if (completionChart) completionChart.dispose();
+            completionChart = echarts.init(completionChartEl);
+            completionChart.setOption({
+                tooltip: { trigger: 'item' },
+                legend: { orient: 'vertical', left: 'left', textStyle: { color: '#f3f4f6' } },
+                series: [
+                    {
+                        type: 'pie',
+                        radius: ['45%', '70%'],
+                        avoidLabelOverlap: false,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        data: [
+                            { value: completed, name: 'Completed', itemStyle: { color: '#4ade80' } },
+                            { value: pending, name: 'Pending', itemStyle: { color: '#f59e0b' } }
+                        ]
+                    }
+                ]
+            });
+        }
+
+        function renderStrugglingChart(items) {
+            if (strugglingChart) strugglingChart.dispose();
+            if (!items || items.length === 0) {
+                strugglingChartEl.innerHTML = '<div class="empty">No struggling concepts.</div>';
+                return;
+            }
+            strugglingChartEl.innerHTML = '';
+            strugglingChart = echarts.init(strugglingChartEl);
+            
+            const sorted = [...items].reverse();
+            const labels = sorted.map(i => i.name);
+            const values = sorted.map(i => i.struggling_count);
+            
+            strugglingChart.setOption({
+                grid: { left: '3%', right: '10%', bottom: '5%', top: '5%', containLabel: true },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                xAxis: {
+                    type: 'value',
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+                    axisLabel: { color: '#9ca3af' }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: labels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#f3f4f6', fontFamily: 'Inter', width: 140, overflow: 'truncate' }
+                },
+                series: [
+                    {
+                        type: 'bar',
+                        data: values,
+                        barWidth: '45%',
+                        itemStyle: { 
+                            borderRadius: [0, 4, 4, 0],
+                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: '#b91c1c' },
+                                { offset: 1, color: '#ef4444' }
+                            ])
+                        },
+                        label: { show: true, position: 'right', color: '#ef4444', fontWeight: 600 }
+                    }
+                ]
+            });
+        }
+
+        function renderStrugglingTable(items) {
+            if (!items || items.length === 0) {
+                strugglingTableEl.innerHTML = '<div class="empty">No struggling concepts.</div>';
+                return;
+            }
+            const rows = items.map(item => `<tr><td>${item.name}</td><td>${item.struggling_count}</td></tr>`).join('');
+            strugglingTableEl.innerHTML = `
+                <table>
+                    <thead><tr><th>Concept</th><th>Struggling Count</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function setToggle(view) {
+            if (view === 'chart') {
+                toggleChart.classList.add('active');
+                toggleTable.classList.remove('active');
+                strugglingChartEl.style.display = 'block';
+                strugglingTableEl.style.display = 'none';
+                if (cachedStruggling.length) renderStrugglingChart(cachedStruggling);
+            } else {
+                toggleTable.classList.add('active');
+                toggleChart.classList.remove('active');
+                strugglingChartEl.style.display = 'none';
+                strugglingTableEl.style.display = 'block';
+                renderStrugglingTable(cachedStruggling);
+            }
+        }
+
+        async function refresh() {
+            const selectedCourse = courseSelect.value || undefined;
+            const data = await fetchStats(selectedCourse);
+            if (data.status !== 'ok') {
+                documentsList.innerHTML = `<div class="empty">${data.message || 'No data available.'}</div>`;
+                return;
+            }
+
+            docCount.textContent = data.documents?.count ?? 0;
+            conceptCount.textContent = data.concepts?.count ?? 0;
+            enrollCount.textContent = data.enrollment_count ?? 0;
+            masteredAllCount.textContent = data.mastered_all_count ?? 0;
+            completedCount.textContent = data.mastered_all_count ?? 0;
+            pendingCount.textContent = data.pending_count ?? 0;
+            totalEnrolled.textContent = data.enrollment_count ?? 0;
+
+            renderDocuments(data.documents?.items || []);
+            renderTopMastered(data.top_mastered_concepts || []);
+
+            cachedStruggling = data.struggling_concepts || [];
+            renderStrugglingChart(cachedStruggling);
+            renderStrugglingTable(cachedStruggling);
+            setToggle('chart');
+
+            renderCompletionChart(data.mastered_all_count || 0, data.pending_count || 0);
+        }
+
+        async function init() {
+            const coursesData = await fetchCourses();
+            const courses = coursesData.courses || [];
+            if (courses.length === 0) {
+                courseSelect.innerHTML = '<option value="">No courses</option>';
+                return;
+            }
+            renderCourseSelect(courses, courses[0].courseid);
+            await refresh();
+        }
+
+        toggleChart.addEventListener('click', () => setToggle('chart'));
+        toggleTable.addEventListener('click', () => setToggle('table'));
+        refreshBtn.addEventListener('click', refresh);
+        courseSelect.addEventListener('change', refresh);
+
+        window.addEventListener('resize', () => {
+            if (completionChart) completionChart.resize();
+            if (strugglingChart) strugglingChart.resize();
+        });
+
+        init();
+    </script>
+</body>
+</html>

@@ -117,6 +117,19 @@ def enroll_user_in_course(user_id: str, courseid: str):
     except Exception as e:
         print(f"Error enrolling user in course: {e}")
 
+def assign_coordinator_to_course(user_id: str, courseid: str):
+    if not graph_db:
+        return
+    cypher = """
+    MATCH (u:User {id: $user_id})
+    MATCH (c:Course {courseid: $courseid})
+    MERGE (u)-[:COORDINATOR_OF]->(c)
+    """
+    try:
+        graph_db.query(cypher, {"user_id": user_id, "courseid": courseid})
+    except Exception as e:
+        print(f"Error assigning coordinator to course: {e}")
+
 def is_enrolled_in_course(user_id: str, courseid: str) -> bool:
     if not graph_db:
         return False
@@ -131,6 +144,22 @@ def is_enrolled_in_course(user_id: str, courseid: str) -> bool:
         return bool(res and res[0].get("count", 0) > 0)
     except Exception as e:
         print(f"Error checking enrollment for course: {e}")
+        return False
+
+def is_coordinator_of_course(user_id: str, courseid: str) -> bool:
+    if not graph_db:
+        return False
+    if not courseid:
+        return False
+    cypher = """
+    MATCH (:User {id: $user_id})-[:COORDINATOR_OF]->(:Course {courseid: $courseid})
+    RETURN count(*) AS count
+    """
+    try:
+        res = graph_db.query(cypher, {"user_id": user_id, "courseid": courseid})
+        return bool(res and res[0].get("count", 0) > 0)
+    except Exception as e:
+        print(f"Error checking coordinator for course: {e}")
         return False
 
 def is_enrolled_any(user_id: str) -> bool:
@@ -163,6 +192,24 @@ def get_enrolled_courses_with_counts(user_id: str) -> List[Dict[str, Any]]:
         return graph_db.query(cypher, {"user_id": user_id})
     except Exception as e:
         print(f"Error fetching enrolled courses: {e}")
+        return []
+
+def get_coordinator_courses_with_counts(user_id: str) -> List[Dict[str, Any]]:
+    if not graph_db:
+        return []
+    cypher = """
+    MATCH (u:User {id: $user_id})-[:COORDINATOR_OF]->(c:Course)
+    OPTIONAL MATCH (:User)-[:ENROLLED_IN]->(c)
+    RETURN c.courseid AS courseid,
+           c.shortname AS courseshortname,
+           c.fullname AS coursefullname,
+           count(*) AS enrolled_count
+    ORDER BY enrolled_count DESC
+    """
+    try:
+        return graph_db.query(cypher, {"user_id": user_id})
+    except Exception as e:
+        print(f"Error fetching coordinator courses: {e}")
         return []
 
 # LLM for Extraction
@@ -232,6 +279,14 @@ def ingest_document(text: str, source_name: str, course: Optional[Dict[str, str]
                             "shortname": course.get("courseshortname"),
                             "fullname": course.get("coursefullname")
                         }
+                    )
+                    graph_db.query(
+                        "MERGE (d:Document {source: $source, courseid: $courseid}) SET d.source = $source, d.courseid = $courseid",
+                        {"source": source_name, "courseid": courseid}
+                    )
+                    graph_db.query(
+                        "MATCH (d:Document {source: $source, courseid: $courseid}) MATCH (c:Course {courseid: $courseid}) MERGE (d)-[:FOR_COURSE]->(c)",
+                        {"source": source_name, "courseid": courseid}
                     )
                     graph_db.query(
                         "UNWIND $data AS item MATCH (k:Concept {name: toLower(item.name)}) MATCH (c:Course {courseid: $courseid}) MERGE (k)-[:PART_OF]->(c)",

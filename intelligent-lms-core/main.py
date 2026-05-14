@@ -55,6 +55,7 @@ class AuthContext(BaseModel):
     courseid: str
     courseshortname: str
     coursefullname: str
+    role: str = "student"
 
 def get_auth_context(request: Request) -> AuthContext:
     auth_header = request.headers.get("Authorization", "")
@@ -88,6 +89,8 @@ def get_auth_context(request: Request) -> AuthContext:
     if missing_fields:
         raise HTTPException(status_code=401, detail=f"Missing claims: {', '.join(missing_fields)}")
 
+    role = str(payload.get("role", "student")).strip().lower()
+
     return AuthContext(
         user_id=str(payload["userid"]),
         username=str(payload["username"]),
@@ -97,7 +100,8 @@ def get_auth_context(request: Request) -> AuthContext:
         fullname=str(payload["fullname"]),
         courseid=str(payload["courseid"]),
         courseshortname=str(payload["courseshortname"]),
-        coursefullname=str(payload["coursefullname"])
+        coursefullname=str(payload["coursefullname"]),
+        role=role
     )
 
 def ensure_user_course_graph(auth: AuthContext):
@@ -184,7 +188,7 @@ async def chat_endpoint(request: ChatRequest, auth: AuthContext = Depends(get_au
     )
 
 from services.tutoring import get_next_challenge, grade_answer, tag_concepts_as_learning, ChallengeGeneration, AssessmentResult
-from services.hybrid_rag import get_enrolled_courses_with_counts
+from services.hybrid_rag import get_enrolled_courses_with_counts, get_coordinator_courses_with_counts, is_coordinator_of_course, assign_coordinator_to_course
 
 class ChallengeRequest(BaseModel):
     user_id: Optional[str] = None
@@ -256,6 +260,9 @@ async def register_endpoint(auth: AuthContext = Depends(get_auth_context)):
     ensure_user_course_graph(auth)
     from services.hybrid_rag import enroll_user_in_course
     enroll_user_in_course(auth.user_id, auth.courseid)
+    coordinator_roles = {"coordinator", "teacher", "instructor", "editingteacher"}
+    if auth.role in coordinator_roles:
+        assign_coordinator_to_course(auth.user_id, auth.courseid)
     return {"status": "success"}
 
 @app.get("/courses", response_model=CourseListResponse)
@@ -276,8 +283,25 @@ async def courses_endpoint(auth: AuthContext = Depends(get_auth_context)):
     ]
     return CourseListResponse(status="ok", courses=summaries)
 
+@app.get("/courses/coordinator", response_model=CourseListResponse)
+async def coordinator_courses_endpoint(auth: AuthContext = Depends(get_auth_context)):
+    ensure_user_course_graph(auth)
+    courses = get_coordinator_courses_with_counts(auth.user_id)
+    summaries = [
+        CourseSummary(
+            courseid=str(c.get("courseid", "")),
+            courseshortname=c.get("courseshortname"),
+            coursefullname=c.get("coursefullname"),
+            enrolled_count=int(c.get("enrolled_count", 0))
+        )
+        for c in courses
+        if c.get("courseid")
+    ]
+    return CourseListResponse(status="ok", courses=summaries)
+
 from services.hybrid_rag import ingest_document
 from fastapi.concurrency import run_in_threadpool
+from services.stats import get_student_stats, get_admin_stats, get_coordinator_stats
 @app.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...), auth: AuthContext = Depends(get_auth_context)):
     ensure_user_course_graph(auth)
@@ -342,3 +366,33 @@ async def upload_ui():
 @app.get("/token-ui")
 async def token_ui():
     return FileResponse("static/token.html")
+
+@app.get("/stats/student")
+async def student_stats(courseid: Optional[str] = None, auth: AuthContext = Depends(get_auth_context)):
+    ensure_user_course_graph(auth)
+    return get_student_stats(auth.user_id, courseid)
+
+@app.get("/stats/admin")
+async def admin_stats(auth: AuthContext = Depends(get_auth_context)):
+    ensure_user_course_graph(auth)
+    return get_admin_stats()
+
+@app.get("/stats/coordinator")
+async def coordinator_stats(courseid: Optional[str] = None, top_k: int = 5, auth: AuthContext = Depends(get_auth_context)):
+    ensure_user_course_graph(auth)
+    selected_course = courseid or auth.courseid
+    if not is_coordinator_of_course(auth.user_id, selected_course):
+        raise HTTPException(status_code=403, detail="Not authorized for coordinator stats.")
+    return get_coordinator_stats(selected_course, top_k)
+
+@app.get("/stats-student-ui")
+async def stats_student_ui():
+    return FileResponse("static/stats-student.html")
+
+@app.get("/stats-admin-ui")
+async def stats_admin_ui():
+    return FileResponse("static/stats-admin.html")
+
+@app.get("/stats-coordinator-ui")
+async def stats_coordinator_ui():
+    return FileResponse("static/stats-coordinator.html")

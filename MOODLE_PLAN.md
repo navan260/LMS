@@ -13,6 +13,7 @@ This document covers the Moodle-side work only.
 - Build claims:
   - userid, username, email, firstname, lastname, fullname
   - courseid, courseshortname, coursefullname
+  - role (student | coordinator | teacher | instructor | editingteacher)
   - iat, exp, iss, aud
 - TTL: exp = iat + 3600 (1 hour)
 - Sign HS256 using shared_jwt_secret
@@ -37,6 +38,12 @@ This document covers the Moodle-side work only.
     - POST /moodle/course-created
     - POST /moodle/user-enrolled
 
+3) Role-based registration
+- When rendering the block JWT, set role for each user:
+  - student for learners
+  - coordinator/teacher/instructor/editingteacher for course owners
+- Backend /register will only create COORDINATOR_OF for roles above
+
 3) Error handling
 - Log failures to Moodle logs
 - Do not block Moodle flow
@@ -46,6 +53,10 @@ This document covers the Moodle-side work only.
 
 Course created payload:
 - courseid, shortname, fullname
+
+Coordinator relationship:
+- backend should create (:User)-[:COORDINATOR_OF]->(:Course)
+- use /register or a new event handler to set COORDINATOR_OF
 
 User enrolled payload:
 - userid, username, email, fullname, courseid

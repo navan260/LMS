@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Learning Stats</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --font-serif: 'Cormorant Garamond', serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --bg-color: #050505;
+            --glass-bg: rgba(18, 18, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --accent-color: #d4af37;
+            --accent-hover: #f1d570;
+            --danger-color: #ef4444;
+            --success-color: #4ade80;
+            --warning-color: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--font-sans);
+            color: var(--text-color);
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #050505, #111827, #0f172a, #000000);
+            background-size: 400% 400%;
+            animation: bgPan 25s ease infinite;
+            padding: 2.5rem 1.5rem 4rem;
+            position: relative;
+        }
+
+        @keyframes bgPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.8));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2rem, 3vw, 3rem);
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        h2 {
+            font-family: var(--font-serif);
+            font-weight: 500;
+            color: var(--text-color);
+            margin-top: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--muted-text);
+            max-width: 520px;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.6rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric span {
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .metric strong {
+            font-size: 2.2rem;
+            font-family: var(--font-serif);
+            color: var(--accent-color);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-card {
+            padding: 1.8rem;
+            border-radius: 20px;
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(16px);
+        }
+
+        .hero-card h2 {
+            margin: 0 0 0.6rem;
+            color: var(--accent-color);
+        }
+
+        .hero-card p {
+            margin: 0;
+            color: var(--muted-text);
+        }
+
+        select {
+            padding: 0.6rem 0.85rem;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-color);
+            border: 1px solid var(--glass-border);
+            font-family: var(--font-sans);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        select:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-color), #aa8529);
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .chip.mastered { color: var(--success-color); border-color: rgba(74, 222, 128, 0.35); }
+        .chip.learning { color: var(--accent-color); border-color: rgba(212, 175, 55, 0.35); }
+        .chip.struggling { color: var(--danger-color); border-color: rgba(239, 68, 68, 0.35); }
+        .chip.not-started { color: var(--muted-text); }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .list-item {
+            padding: 0.8rem 1rem;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .list-item strong {
+            font-weight: 500;
+        }
+
+        .pill {
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--muted-text);
+        }
+
+        .graph {
+            position: relative;
+            min-height: 420px;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+
+        .empty {
+            color: var(--muted-text);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        @media (max-width: 720px) {
+            header { flex-direction: column; align-items: flex-start; }
+            .controls { width: 100%; }
+            select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-overlay"></div>
+    <div class="content-wrapper">
+        <header>
+            <div>
+                <h1>Learning Progress</h1>
+                <p class="subtitle">Track courses, mastery status, and your concept map for the course you want to focus on.</p>
+            </div>
+            <a class="nav-link" href="/">← Back to Menu</a>
+        </header>
+
+        <section class="hero">
+            <div class="hero-card">
+                <h2>Student Insight</h2>
+                <p>See what you are mastering, where you are learning, and what needs attention.</p>
+            </div>
+            <div class="panel">
+                <div class="controls">
+                    <select id="courseSelect"></select>
+                    <button id="refreshBtn">Refresh</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid" style="margin-bottom: 1.5rem;">
+            <div class="panel metric">
+                <span>Mastered</span>
+                <strong id="masteredCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Learning</span>
+                <strong id="learningCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Struggling</span>
+                <strong id="strugglingCount">0</strong>
+            </div>
+            <div class="panel metric">
+                <span>Not Started</span>
+                <strong id="notStartedCount">0</strong>
+            </div>
+        </section>
+
+        <section class="grid" style="margin-bottom: 1.5rem;">
+            <div class="panel">
+                <h2>Top Mastered Concepts</h2>
+                <div id="topMastered" class="list"></div>
+            </div>
+            <div class="panel">
+                <h2>Learning Now</h2>
+                <div id="learningList" class="list"></div>
+            </div>
+            <div class="panel">
+                <h2>Struggling With</h2>
+                <div id="strugglingList" class="list"></div>
+            </div>
+        </section>
+
+        <section class="panel" style="margin-bottom: 1.5rem;">
+            <h2>Current Course Status</h2>
+            <div id="statusLegend" class="list" style="flex-direction: row; flex-wrap: wrap;">
+                <span class="chip mastered">Mastered</span>
+                <span class="chip learning">Learning</span>
+                <span class="chip struggling">Struggling</span>
+                <span class="chip not-started">Not Started</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Knowledge Map</h2>
+            <div class="graph" id="graph"></div>
+        </section>
+    </div>
+
+    <script>
+        const courseSelect = document.getElementById('courseSelect');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const masteredCount = document.getElementById('masteredCount');
+        const learningCount = document.getElementById('learningCount');
+        const strugglingCount = document.getElementById('strugglingCount');
+        const notStartedCount = document.getElementById('notStartedCount');
+        const topMastered = document.getElementById('topMastered');
+        const learningList = document.getElementById('learningList');
+        const strugglingList = document.getElementById('strugglingList');
+        const graph = document.getElementById('graph');
+        let chart;
+
+        function getAuthToken() {
+            const params = new URLSearchParams(window.location.search);
+            const urlToken = params.get('token');
+            if (urlToken) return urlToken;
+            return localStorage.getItem('lms_test_jwt') || '';
+        }
+
+        async function fetchStats(courseid) {
+            const token = getAuthToken();
+            const query = courseid ? `?courseid=${encodeURIComponent(courseid)}` : '';
+            const res = await fetch(`/stats/student${query}`, {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            if (!res.ok) {
+                return { status: 'error', message: `Request failed (${res.status})` };
+            }
+            return res.json();
+        }
+
+        function renderCourses(courses, selectedId) {
+            courseSelect.innerHTML = '';
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseid;
+                option.textContent = course.coursefullname || course.courseshortname || course.courseid;
+                if (course.courseid === selectedId) option.selected = true;
+                courseSelect.appendChild(option);
+            });
+        }
+
+        function renderCounts(counts) {
+            masteredCount.textContent = counts.mastered_count ?? 0;
+            learningCount.textContent = counts.learning_count ?? 0;
+            strugglingCount.textContent = counts.struggling_count ?? 0;
+            notStartedCount.textContent = counts.not_started_count ?? 0;
+        }
+
+        function renderTopMastered(items) {
+            topMastered.innerHTML = '';
+            if (!items || items.length === 0) {
+                topMastered.innerHTML = '<div class="empty">No mastered concepts yet.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.innerHTML = `<strong>${item.name}</strong><span class="pill">Score ${(item.score ?? 0).toFixed(2)}</span>`;
+                topMastered.appendChild(row);
+            });
+        }
+
+        function renderLearning(items) {
+            learningList.innerHTML = '';
+            if (!items || items.length === 0) {
+                learningList.innerHTML = '<div class="empty">No active learning concepts.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.innerHTML = `<strong>${item.name}</strong><span class="pill">In progress</span>`;
+                learningList.appendChild(row);
+            });
+        }
+
+        function renderStruggling(items) {
+            strugglingList.innerHTML = '';
+            if (!items || items.length === 0) {
+                strugglingList.innerHTML = '<div class="empty">No struggling concepts.</div>';
+                return;
+            }
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                const score = (item.score ?? 0).toFixed(2);
+                row.innerHTML = `<strong>${item.name}</strong><span class="pill">Score ${score}</span>`;
+                strugglingList.appendChild(row);
+            });
+        }
+
+        function renderGraph(nodes, edges) {
+            if (!nodes || nodes.length === 0) {
+                graph.innerHTML = '<div class="empty">No concept graph yet. Upload course material to generate concepts.</div>';
+                return;
+            }
+
+            graph.innerHTML = '<div id="graphChart"></div>';
+            const chartEl = document.getElementById('graphChart');
+            chartEl.style.height = '420px';
+            chartEl.style.width = '100%';
+            if (chart) chart.dispose();
+            chart = echarts.init(chartEl);
+
+            const colorMap = {
+                MASTERED: '#4ade80',
+                LEARNING: '#d4af37',
+                STRUGGLING_WITH: '#ef4444',
+                NOT_STARTED: '#9ca3af'
+            };
+
+            const categories = [
+                { name: 'Mastered' },
+                { name: 'Learning' },
+                { name: 'Struggling' },
+                { name: 'Not Started' }
+            ];
+
+            const data = nodes.map((node, idx) => {
+                const categoryIndex = node.status === 'MASTERED' ? 0 :
+                    node.status === 'LEARNING' ? 1 :
+                    node.status === 'STRUGGLING_WITH' ? 2 : 3;
+                return {
+                    id: node.name,
+                    name: node.name.replace(/_/g, ' '),
+                    value: idx,
+                    category: categoryIndex,
+                    symbolSize: node.status === 'MASTERED' ? 42 : node.status === 'LEARNING' ? 34 : node.status === 'STRUGGLING_WITH' ? 36 : 28,
+                    itemStyle: { color: colorMap[node.status] || '#9ca3af' }
+                };
+            });
+
+            const links = (edges || []).map(edge => ({ source: edge.source, target: edge.target }));
+
+            chart.setOption({
+                tooltip: {
+                    formatter: (params) => params.data?.name || ''
+                },
+                legend: [{ data: categories.map(c => c.name), textStyle: { color: '#f3f4f6' } }],
+                series: [
+                    {
+                        type: 'graph',
+                        layout: 'force',
+                        data,
+                        links,
+                        categories,
+                        roam: true,
+                        label: { show: true, color: '#f3f4f6', fontSize: 11 },
+                        force: {
+                            repulsion: 160,
+                            edgeLength: 90,
+                            gravity: 0.08
+                        },
+                        edgeSymbol: ['none', 'arrow'],
+                        edgeSymbolSize: 8,
+                        lineStyle: {
+                            color: 'rgba(255,255,255,0.45)',
+                            width: 1.8
+                        },
+                        emphasis: {
+                            focus: 'adjacency',
+                            lineStyle: { width: 2.6, color: 'rgba(212,175,55,0.8)' }
+                        }
+                    }
+                ]
+            });
+
+            setTimeout(() => {
+                if (chart) chart.resize();
+            }, 0);
+
+            window.addEventListener('resize', () => {
+                if (chart) chart.resize();
+            });
+        }
+
+        async function refresh() {
+            const courseId = courseSelect.value || undefined;
+            const data = await fetchStats(courseId);
+            if (data.status === 'error') {
+                graph.innerHTML = `<div class="empty">${data.message}. Provide a valid token.</div>`;
+                return;
+            }
+            if (data.status === 'not_enrolled') {
+                graph.innerHTML = `<div class="empty">${data.message}</div>`;
+                return;
+            }
+            renderCourses(data.courses, data.selected_courseid);
+            renderCounts(data.concept_counts || {});
+            renderTopMastered(data.top_mastered || []);
+            renderLearning(data.learning_concepts || []);
+            renderStruggling(data.struggling_concepts || []);
+            renderGraph(data.nodes || [], data.edges || []);
+        }
+
+        refreshBtn.addEventListener('click', refresh);
+        courseSelect.addEventListener('change', refresh);
+
+        refresh();
+    </script>
+</body>
+</html>

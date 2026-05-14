@@ -236,6 +236,10 @@
             <h2 style="margin-top: 0;">JWT Settings</h2>
             <div class="grid">
                 <div>
+                    <label for="role">Role</label>
+                    <input id="role" placeholder="student" />
+                </div>
+                <div>
                     <label for="secret">JWT Secret</label>
                     <input id="secret" placeholder="Shared secret" />
                 </div>
@@ -270,9 +274,10 @@
         const storageKey = 'lms_test_jwt';
         const payloadKey = 'lms_test_payload';
 
-        const fields = [
+            const fields = [
             'userid', 'username', 'email', 'firstname', 'lastname', 'fullname',
             'courseid', 'courseshortname', 'coursefullname',
+            'role',
             'secret', 'issuer', 'audience'
         ];
 
@@ -310,6 +315,9 @@
                 { href: '/telemetry-ui', label: 'Telemetry UI' },
                 { href: '/challenge-ui', label: 'Challenge UI' },
                 { href: '/upload-ui', label: 'Upload UI' },
+                { href: '/stats-student-ui', label: 'Student Stats' },
+                { href: '/stats-admin-ui', label: 'Admin Stats' },
+                { href: '/stats-coordinator-ui', label: 'Coordinator Stats' },
                 { href: '/embed', label: 'Embed Chat' }
             ];
             const container = document.getElementById('links');
@@ -359,7 +367,8 @@
                 fullname: getFieldValue('fullname'),
                 courseid: getFieldValue('courseid'),
                 courseshortname: getFieldValue('courseshortname'),
-                coursefullname: getFieldValue('coursefullname')
+                coursefullname: getFieldValue('coursefullname'),
+                role: getFieldValue('role') || 'student'
             };
 
             const missing = Object.entries(payload)
