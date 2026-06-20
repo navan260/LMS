@@ -145,29 +145,35 @@ def tag_concepts_as_learning(user_id: str, concept_names: list, courseid: Option
         MATCH (c:Concept)-[:PART_OF]->(:Course {courseid: $courseid})
         WHERE toLower(c.name) = toLower(concept_name)
         MERGE (u:User {id: $user_id})
-        WITH u, c
+        WITH concept_name, u, c
         OPTIONAL MATCH (u)-[m:MASTERED]->(c)
-        WITH u, c, m WHERE m IS NULL
+        WITH concept_name, u, c, m WHERE m IS NULL
         MERGE (u)-[r:LEARNING]->(c)
         SET r.last_seen = timestamp()
+        RETURN concept_name
         """
     else:
         cypher = """
         UNWIND $concepts AS concept_name
         MATCH (c:Concept) WHERE toLower(c.name) = toLower(concept_name)
         MERGE (u:User {id: $user_id})
-        WITH u, c
+        WITH concept_name, u, c
         OPTIONAL MATCH (u)-[m:MASTERED]->(c)
-        WITH u, c, m WHERE m IS NULL
+        WITH concept_name, u, c, m WHERE m IS NULL
         MERGE (u)-[r:LEARNING]->(c)
         SET r.last_seen = timestamp()
+        RETURN concept_name
         """
     try:
         params = {"user_id": user_id, "concepts": concept_names}
         if courseid:
             params["courseid"] = courseid
-        graph_db.query(cypher, params)
-        print(f"[Neo4j] Successfully tagged {len(concept_names)} concept(s) as LEARNING: {concept_names}")
+        result = graph_db.query(cypher, params)
+        tagged = [row["concept_name"] for row in result]
+        untagged = [n for n in concept_names if n not in tagged]
+        print(f"[Neo4j] Tagged {len(tagged)}/{len(concept_names)} as LEARNING: {tagged}")
+        if untagged:
+            print(f"[Neo4j] WARNING: {len(untagged)} concept(s) not tagged — not found in course graph or already MASTERED: {untagged}")
     except Exception as e:
         print(f"[Neo4j] ERROR tagging concepts as LEARNING: {e}")
 

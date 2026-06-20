@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -18,7 +19,13 @@ from services.hybrid_rag import is_enrolled_in_course, is_enrolled_any
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Intelligent Agentic LMS")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from services.hybrid_rag import initialize_neo4j_schema
+    initialize_neo4j_schema()
+    yield
+
+app = FastAPI(title="Intelligent Agentic LMS", lifespan=lifespan)
 
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 JWT_ALGORITHM = "HS256"
@@ -40,10 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    from services.hybrid_rag import initialize_neo4j_schema
-    initialize_neo4j_schema()
 
 class AuthContext(BaseModel):
     user_id: str
@@ -162,7 +165,14 @@ async def chat_endpoint(request: ChatRequest, auth: AuthContext = Depends(get_au
         "matched_concepts": [],
         "graph_nodes": {},
         "missing_nodes": [],
-        "courseid": auth.courseid
+        "courseid": auth.courseid,
+        "user_id": auth.user_id,
+        "learning_intent": "learning",
+        "detected_concepts": [],
+        "user_prerequisites": [],
+        "concept_prerequisites": [],
+        "missing_prerequisites": [],
+        "concept_vectors": []
     }
     
     result = graph.invoke(initial_state)
@@ -170,12 +180,6 @@ async def chat_endpoint(request: ChatRequest, auth: AuthContext = Depends(get_au
     # Extract the AI's response and missing nodes
     ai_message = result["messages"][-1].content
     missing = result.get("missing_nodes", [])
-    
-    # Tag only the directly matched concepts + their prerequisites as LEARNING in Neo4j
-    matched = result.get("matched_concepts", [])
-    prereqs = result.get("prerequisites", [])
-    learned_concepts = list(set(matched + prereqs))  # deduplicate
-    tag_concepts_as_learning(auth.user_id, learned_concepts, auth.courseid)
     
     # Save the AI message to history
     user_history.append(result["messages"][-1])
@@ -187,7 +191,7 @@ async def chat_endpoint(request: ChatRequest, auth: AuthContext = Depends(get_au
         status="ok"
     )
 
-from services.tutoring import get_next_challenge, grade_answer, tag_concepts_as_learning, ChallengeGeneration, AssessmentResult
+from services.tutoring import get_next_challenge, grade_answer, ChallengeGeneration, AssessmentResult
 from services.hybrid_rag import get_enrolled_courses_with_counts, get_coordinator_courses_with_counts, is_coordinator_of_course, assign_coordinator_to_course
 
 class ChallengeRequest(BaseModel):

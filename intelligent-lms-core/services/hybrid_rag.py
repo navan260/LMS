@@ -317,6 +317,67 @@ def ingest_document(text: str, source_name: str, course: Optional[Dict[str, str]
         print("Neo4j not configured. Skipping graph extraction.")
 
 
+def get_user_mastered_concepts(user_id: str, courseid: Optional[str] = None) -> List[str]:
+    """Returns list of concept names the user has MASTERED."""
+    if not graph_db:
+        return []
+    cypher = """
+    MATCH (u:User {id: $user_id})-[r:MASTERED]->(c:Concept)
+    WHERE r.score IS NULL OR r.score >= 0.7
+    """
+    params = {"user_id": user_id}
+    if courseid:
+        cypher += " MATCH (c)-[:PART_OF]->(:Course {courseid: $courseid})"
+        params["courseid"] = courseid
+    cypher += " RETURN c.name AS name"
+    try:
+        results = graph_db.query(cypher, params)
+        return [r["name"] for r in results if r.get("name")]
+    except Exception as e:
+        print(f"Error fetching user mastered concepts: {e}")
+        return []
+
+def get_concept_prerequisites(concept_names: List[str], courseid: Optional[str] = None) -> List[str]:
+    """Returns prerequisites of the given concept names."""
+    if not graph_db or not concept_names:
+        return []
+    cypher = """
+    MATCH (c:Concept) WHERE toLower(c.name) IN $concept_names
+    MATCH (prereq:Concept)-[:PREREQUISITE_OF]->(c)
+    """
+    params = {"concept_names": [n.lower() for n in concept_names]}
+    if courseid:
+        cypher += " MATCH (c)-[:PART_OF]->(:Course {courseid: $courseid})"
+        params["courseid"] = courseid
+    cypher += " RETURN DISTINCT prereq.name AS name"
+    try:
+        results = graph_db.query(cypher, params)
+        return list({r["name"] for r in results if r.get("name")})
+    except Exception as e:
+        print(f"Error fetching concept prerequisites: {e}")
+        return []
+
+def get_concept_vectors(concept_names: List[str], courseid: Optional[str] = None) -> List[str]:
+    """Retrieves document chunks from Astra DB for the given concepts."""
+    docs = []
+    if not vector_store or not concept_names:
+        return docs
+    seen = set()
+    for concept_name in concept_names:
+        search_kwargs = {"k": 2}
+        if courseid:
+            search_kwargs["filter"] = {"courseid": courseid}
+        try:
+            results = vector_store.similarity_search(concept_name, **search_kwargs)
+            for r in results:
+                content = r.page_content.strip()
+                if content and content not in seen:
+                    docs.append(content)
+                    seen.add(content)
+        except Exception as e:
+            print(f"Error fetching vectors for '{concept_name}': {e}")
+    return docs
+
 def hybrid_retrieve(query: str, courseid: Optional[str] = None) -> Dict[str, Any]:
     """Retrieves documents from DataStax and prerequisites from Neo4j."""
     
